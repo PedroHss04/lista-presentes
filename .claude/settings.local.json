@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "PowerShell(gh repo view obra/superpowers --json description,readme 2>$null)",
+      "PowerShell(if \\(-not $?\\) { \"gh not available or not authenticated\" })",
+      "WebFetch(domain:api.github.com)",
+      "PowerShell($content = Invoke-WebRequest -Uri \"https://raw.githubusercontent.com/obra/superpowers/main/README.md\" -UseBasicParsing; $content.Content)",
+      "PowerShell($r = Invoke-WebRequest -Uri \"https://raw.githubusercontent.com/obra/superpowers/main/CLAUDE.md\" -UseBasicParsing; $r.Content)",
+      "PowerShell($r = Invoke-WebRequest -Uri \"https://api.github.com/repos/obra/superpowers/contents/skills\" -UseBasicParsing; \\($r.Content | ConvertFrom-Json\\) | ForEach-Object { $_.name })",
+      "PowerShell($r = Invoke-WebRequest -Uri \"https://api.github.com/repos/obra/superpowers/contents/.claude-plugin\" -UseBasicParsing; $items = $r.Content | ConvertFrom-Json; $items | ForEach-Object { $_.name + \" -> \" + $_.type })",
+      "PowerShell($r = Invoke-WebRequest -Uri \"https://raw.githubusercontent.com/obra/superpowers/main/skills/using-superpowers/SKILL.md\" -UseBasicParsing; $r.Content)",
+      "PowerShell(Get-ChildItem \"$env:USERPROFILE\\\\.claude\" -Recurse -ErrorAction SilentlyContinue | Select-Object FullName | Head-Object -n 50)",
+      "PowerShell(Get-ChildItem \"$env:USERPROFILE\\\\.claude\" -ErrorAction SilentlyContinue | Select-Object Name, Attributes)",
+      "PowerShell(Test-Path \"$env:USERPROFILE\\\\.claude\"; Get-ChildItem \"$env:USERPROFILE\\\\.claude\" -Force -ErrorAction SilentlyContinue)",
+      "PowerShell($r = Invoke-WebRequest -Uri \"https://api.github.com/repos/obra/superpowers/contents/docs\" -UseBasicParsing; \\($r.Content | ConvertFrom-Json\\) | ForEach-Object { $_.name })",
+      "Bash(git *)"
+    ]
+  },
+  "enabledPlugins": {}
+}
