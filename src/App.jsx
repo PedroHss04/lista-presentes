@@ -22,6 +22,11 @@ export default function App() {
     })
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => {
       setSession(s)
+      if (!s) {
+        setPessoas([])
+        setPresentes([])
+        setPessoaSelecionadaId(null)
+      }
     })
     return () => subscription.unsubscribe()
   }, [])
