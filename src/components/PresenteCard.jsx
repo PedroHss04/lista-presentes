@@ -3,6 +3,14 @@ import { formatBRL, safeHostname } from '../lib/format.js'
 
 export default function PresenteCard({ presente, onAtualizar, onRemover, nomeViewer, isOwner }) {
   const [marcando, setMarcando] = useState(false)
+  const [editando, setEditando] = useState(false)
+  const [nome, setNome] = useState(presente.nome)
+  const [valor, setValor] = useState(presente.valor != null ? String(presente.valor).replace('.', ',') : '')
+  const [link, setLink] = useState(presente.link || '')
+  const [observacao, setObservacao] = useState(presente.observacao || '')
+  const [salvando, setSalvando] = useState(false)
+  const [erro, setErro] = useState(null)
+
   const valorFormatado = formatBRL(presente.valor)
   const host = presente.link ? safeHostname(presente.link) : null
 
@@ -19,9 +27,115 @@ export default function PresenteCard({ presente, onAtualizar, onRemover, nomeVie
     }
   }
 
+  async function salvarEdicao(e) {
+    e.preventDefault()
+    if (!nome.trim()) return
+    setSalvando(true)
+    setErro(null)
+    try {
+      await onAtualizar(presente.id, {
+        nome: nome.trim(),
+        valor: valor === '' ? null : Number(valor.replace(',', '.')),
+        link: link.trim() || null,
+        observacao: observacao.trim() || null,
+      })
+      setEditando(false)
+    } catch (err) {
+      setErro(err.message || 'Erro ao salvar')
+    } finally {
+      setSalvando(false)
+    }
+  }
+
+  function cancelarEdicao() {
+    setNome(presente.nome)
+    setValor(presente.valor != null ? String(presente.valor).replace('.', ',') : '')
+    setLink(presente.link || '')
+    setObservacao(presente.observacao || '')
+    setErro(null)
+    setEditando(false)
+  }
+
   async function remover() {
     if (!window.confirm(`Remover "${presente.nome}"?`)) return
     await onRemover(presente.id)
+  }
+
+  if (editando) {
+    return (
+      <article className="rounded-2xl border border-brand-200 bg-white p-4 shadow-soft">
+        <form onSubmit={salvarEdicao} className="space-y-3">
+          <h4 className="font-semibold text-gray-800 text-sm">Editar presente</h4>
+
+          <div>
+            <label className="text-xs font-medium text-gray-600 mb-1 block">Nome *</label>
+            <input
+              autoFocus
+              type="text"
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Valor (R$)</label>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={valor}
+                onChange={(e) => setValor(e.target.value)}
+                placeholder="299,90"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-600 mb-1 block">Link de compra</label>
+              <input
+                type="text"
+                value={link}
+                onChange={(e) => setLink(e.target.value)}
+                placeholder="https://..."
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-gray-600 mb-1 block">Observação</label>
+            <input
+              type="text"
+              value={observacao}
+              onChange={(e) => setObservacao(e.target.value)}
+              placeholder="Cor preferida, tamanho, etc."
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-400"
+            />
+          </div>
+
+          {erro && (
+            <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{erro}</p>
+          )}
+
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              disabled={salvando || !nome.trim()}
+              className="flex-1 bg-brand-500 hover:bg-brand-600 disabled:bg-brand-300 text-white font-medium rounded-lg py-2 text-sm transition"
+            >
+              {salvando ? 'Salvando...' : 'Salvar'}
+            </button>
+            <button
+              type="button"
+              onClick={cancelarEdicao}
+              className="px-4 rounded-lg border border-gray-200 hover:bg-gray-50 text-gray-700 text-sm"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </article>
+    )
   }
 
   return (
@@ -111,13 +225,22 @@ export default function PresenteCard({ presente, onAtualizar, onRemover, nomeVie
               </span>
             )}
             {isOwner && (
-              <button
-                type="button"
-                onClick={remover}
-                className="text-gray-400 hover:text-red-500 text-xs ml-auto"
-              >
-                remover
-              </button>
+              <div className="flex items-center gap-3 ml-auto">
+                <button
+                  type="button"
+                  onClick={() => setEditando(true)}
+                  className="text-gray-400 hover:text-brand-500 text-xs"
+                >
+                  editar
+                </button>
+                <button
+                  type="button"
+                  onClick={remover}
+                  className="text-gray-400 hover:text-red-500 text-xs"
+                >
+                  remover
+                </button>
+              </div>
             )}
           </div>
         </div>

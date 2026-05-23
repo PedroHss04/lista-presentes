@@ -89,7 +89,7 @@ export default function PresenteForm({ onAdicionar }) {
             Link de compra
           </label>
           <input
-            type="url"
+            type="text"
             value={link}
             onChange={(e) => setLink(e.target.value)}
             placeholder="https://..."
