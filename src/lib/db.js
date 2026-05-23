@@ -1,9 +1,7 @@
 // Camada de acesso aos dados.
 // Usa Supabase quando configurado; senão usa localStorage (modo demo).
 
-import { supabase, isSupabaseConfigured } from './supabase.js'
-
-export const mode = isSupabaseConfigured ? 'supabase' : 'demo'
+import { supabase } from './supabase.js'
 
 // ============================================================
 // Backend: Supabase
@@ -162,4 +160,4 @@ const demoDb = {
 // ============================================================
 // Export final — mesma interface, troca o backend
 // ============================================================
-export const db = isSupabaseConfigured ? supabaseDb : demoDb
+export const db = supabaseDb
