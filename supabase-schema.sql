@@ -55,6 +55,10 @@ create policy "pessoas_delete" on public.pessoas
   for delete to authenticated
   using (user_id = auth.uid());
 
+create policy "pessoas_insert" on public.pessoas
+  for insert to authenticated
+  with check (user_id = auth.uid());
+
 -- Policies de presentes
 create policy "presentes_select" on public.presentes
   for select to authenticated using (true);
@@ -67,12 +71,8 @@ create policy "presentes_insert" on public.presentes
 
 create policy "presentes_update" on public.presentes
   for update to authenticated
-  using (
-    exists (select 1 from public.pessoas p where p.id = pessoa_id and p.user_id = auth.uid())
-  )
-  with check (
-    exists (select 1 from public.pessoas p where p.id = pessoa_id and p.user_id = auth.uid())
-  );
+  using (true)
+  with check (true);
 
 create policy "presentes_delete" on public.presentes
   for delete to authenticated
@@ -86,7 +86,7 @@ returns trigger as $$
 begin
   insert into public.pessoas (nome, emoji, user_id)
   values (
-    coalesce(new.raw_user_meta_data->>'full_name', new.email),
+    coalesce(new.raw_user_meta_data->>'full_name', new.email, 'Usuário'),
     '🎁',
     new.id
   );
