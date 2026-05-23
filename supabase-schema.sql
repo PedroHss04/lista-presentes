@@ -17,7 +17,7 @@ create table public.pessoas (
   id         uuid primary key default gen_random_uuid(),
   nome       text not null,
   emoji      text default '🎁',
-  user_id    uuid references auth.users(id) unique,
+  user_id    uuid not null references auth.users(id) unique,
   created_at timestamptz not null default now()
 );
 
@@ -62,22 +62,22 @@ create policy "presentes_select" on public.presentes
 create policy "presentes_insert" on public.presentes
   for insert to authenticated
   with check (
-    pessoa_id in (select id from public.pessoas where user_id = auth.uid())
+    exists (select 1 from public.pessoas p where p.id = pessoa_id and p.user_id = auth.uid())
   );
 
 create policy "presentes_update" on public.presentes
   for update to authenticated
   using (
-    pessoa_id in (select id from public.pessoas where user_id = auth.uid())
+    exists (select 1 from public.pessoas p where p.id = pessoa_id and p.user_id = auth.uid())
   )
   with check (
-    pessoa_id in (select id from public.pessoas where user_id = auth.uid())
+    exists (select 1 from public.pessoas p where p.id = pessoa_id and p.user_id = auth.uid())
   );
 
 create policy "presentes_delete" on public.presentes
   for delete to authenticated
   using (
-    pessoa_id in (select id from public.pessoas where user_id = auth.uid())
+    exists (select 1 from public.pessoas p where p.id = pessoa_id and p.user_id = auth.uid())
   );
 
 -- Trigger: cria pessoa automaticamente quando um novo usuário faz login pela 1ª vez
@@ -92,8 +92,9 @@ begin
   );
   return new;
 end;
-$$ language plpgsql security definer;
+$$ language plpgsql security definer
+set search_path = public;
 
 create trigger on_auth_user_created
   after insert on auth.users
-  for each row execute procedure public.handle_new_user();
+  for each row execute function public.handle_new_user();
