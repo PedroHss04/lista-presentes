@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { formatBRL, safeHostname } from '../lib/format.js'
 
-export default function PresenteCard({ presente, onAtualizar, onRemover, onArquivar, nomeViewer, isOwner, amigoSecreto }) {
+export default function PresenteCard({ presente, onAtualizar, onRemover, onArquivar, nomeViewer, isOwner }) {
   const [marcando, setMarcando] = useState(false)
   const [editando, setEditando] = useState(false)
   const [nome, setNome] = useState(presente.nome)
@@ -226,7 +226,7 @@ export default function PresenteCard({ presente, onAtualizar, onRemover, onArqui
             )}
             {presente.comprado && presente.comprado_por && (
               <span className="text-xs bg-emerald-100 text-emerald-700 rounded-full px-2 py-0.5">
-                {isOwner && amigoSecreto ? 'reservado' : `comprado por ${presente.comprado_por}`}
+                {presente.amigo_secreto ? 'reservado' : `comprado por ${presente.comprado_por}`}
               </span>
             )}
             {isOwner && (
@@ -237,6 +237,14 @@ export default function PresenteCard({ presente, onAtualizar, onRemover, onArqui
                   className="text-gray-400 hover:text-brand-500 text-xs"
                 >
                   editar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onAtualizar(presente.id, { amigo_secreto: !presente.amigo_secreto })}
+                  className={`text-xs transition ${presente.amigo_secreto ? 'text-amber-500 hover:text-amber-600' : 'text-gray-400 hover:text-amber-500'}`}
+                  title={presente.amigo_secreto ? 'Desativar amigo secreto' : 'Ativar amigo secreto'}
+                >
+                  secreto
                 </button>
                 <button
                   type="button"

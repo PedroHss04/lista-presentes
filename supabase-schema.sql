@@ -16,7 +16,6 @@ create table public.pessoas (
   nome          text not null,
   emoji         text default '🎁',
   user_id       uuid not null references auth.users(id) unique,
-  amigo_secreto boolean not null default false,
   created_at    timestamptz not null default now()
 );
 
@@ -30,9 +29,10 @@ create table public.presentes (
   valor        numeric(10, 2),
   link         text,
   observacao   text,
-  comprado     boolean not null default false,
-  comprado_por text,
-  arquivado    boolean not null default false,
+  comprado      boolean not null default false,
+  comprado_por  text,
+  amigo_secreto boolean not null default false,
+  arquivado     boolean not null default false,
   created_at   timestamptz not null default now()
 );
 
@@ -103,8 +103,9 @@ create trigger on_auth_user_created
 -- Migrations para banco já existente (v2 → v3)
 -- Execute no SQL Editor do Supabase se NÃO quiser fazer reset.
 -- =============================================================
--- alter table public.pessoas  add column if not exists amigo_secreto boolean not null default false;
--- alter table public.presentes add column if not exists arquivado    boolean not null default false;
+-- alter table public.presentes add column if not exists arquivado     boolean not null default false;
+-- alter table public.presentes add column if not exists amigo_secreto boolean not null default false;
+-- alter table public.pessoas   drop column  if exists  amigo_secreto;
 --
 -- Habilitar Realtime nas tabelas (necessário para sync ao vivo):
 -- alter publication supabase_realtime add table public.presentes;

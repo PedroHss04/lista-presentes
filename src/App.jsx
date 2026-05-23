@@ -155,8 +155,6 @@ export default function App() {
     pessoaSelecionada && pessoaSelecionada.user_id === session?.user?.id
   )
 
-  const amigoSecreto = pessoaSelecionada?.amigo_secreto ?? false
-
   async function adicionarPresente(payload) {
     if (!pessoaSelecionadaId) return
     const { data, error } = await supabase
@@ -193,21 +191,6 @@ export default function App() {
 
   async function arquivarPresente(id) {
     await atualizarPresente(id, { arquivado: true })
-  }
-
-  async function toggleAmigoSecreto() {
-    if (!pessoaSelecionada) return
-    const { data, error } = await supabase
-      .from('pessoas')
-      .update({ amigo_secreto: !pessoaSelecionada.amigo_secreto })
-      .eq('id', pessoaSelecionada.id)
-      .select()
-      .single()
-    if (error) {
-      alert(error.message)
-      return
-    }
-    setPessoas((prev) => prev.map((p) => (p.id === data.id ? data : p)))
   }
 
   if (loadingAuth) {
@@ -276,32 +259,19 @@ export default function App() {
               />
             ) : (
               <>
-                <div className="flex items-start justify-between mb-4 flex-wrap gap-3">
+                <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
                   <h2 className="text-2xl font-semibold text-gray-900 flex items-center gap-2">
                     <span className="text-3xl">{pessoaSelecionada.emoji}</span>
                     Presentes para {pessoaSelecionada.nome}
                   </h2>
-                  <div className="flex items-center gap-4 flex-wrap">
-                    {isOwner && (
-                      <label className="flex items-center gap-1.5 cursor-pointer text-sm text-gray-500 hover:text-gray-700 select-none">
-                        <input
-                          type="checkbox"
-                          checked={amigoSecreto}
-                          onChange={toggleAmigoSecreto}
-                          className="w-4 h-4 accent-brand-500"
-                        />
-                        Amigo secreto
-                      </label>
-                    )}
-                    {totalEstimado > 0 && (
-                      <span className="text-sm text-gray-500">
-                        total estimado:{' '}
-                        <strong className="text-gray-700">
-                          {formatBRL(totalEstimado)}
-                        </strong>
-                      </span>
-                    )}
-                  </div>
+                  {totalEstimado > 0 && (
+                    <span className="text-sm text-gray-500">
+                      total estimado:{' '}
+                      <strong className="text-gray-700">
+                        {formatBRL(totalEstimado)}
+                      </strong>
+                    </span>
+                  )}
                 </div>
 
                 <div className="space-y-3 mb-4">
@@ -320,7 +290,6 @@ export default function App() {
                       onArquivar={arquivarPresente}
                       nomeViewer={nomeViewer}
                       isOwner={isOwner}
-                      amigoSecreto={amigoSecreto}
                     />
                   ))}
                 </div>
