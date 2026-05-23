@@ -54,7 +54,7 @@ export default function App() {
   useEffect(() => {
     if (session) carregar()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session])
+  }, [session?.user?.id])
 
   const pessoaSelecionada = useMemo(
     () => pessoas.find((p) => p.id === pessoaSelecionadaId) || null,
@@ -144,7 +144,7 @@ export default function App() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            {session.user.user_metadata.avatar_url && (
+            {session?.user?.user_metadata?.avatar_url && (
               <img
                 src={session.user.user_metadata.avatar_url}
                 alt={nomeViewer}
@@ -154,7 +154,7 @@ export default function App() {
             <span className="text-sm text-gray-700">{nomeViewer}</span>
             <button
               type="button"
-              onClick={() => supabase.auth.signOut()}
+              onClick={() => supabase.auth.signOut().catch(console.error)}
               className="text-xs text-gray-500 hover:text-red-500 transition"
             >
               sair
