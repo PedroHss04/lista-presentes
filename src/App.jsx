@@ -14,6 +14,7 @@ export default function App() {
   const [pessoaSelecionadaId, setPessoaSelecionadaId] = useState(null)
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState(null)
+  const [historicoAberto, setHistoricoAberto] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -61,6 +62,60 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id])
 
+  // Realtime: sync ao vivo com outros membros da família
+  useEffect(() => {
+    if (!session?.user?.id) return
+
+    const channel = supabase
+      .channel('familia-sync')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'presentes' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setPresentes((prev) =>
+              prev.some((p) => p.id === payload.new.id) ? prev : [...prev, payload.new]
+            )
+          } else if (payload.eventType === 'UPDATE') {
+            setPresentes((prev) =>
+              prev.map((p) => (p.id === payload.new.id ? payload.new : p))
+            )
+          } else if (payload.eventType === 'DELETE') {
+            setPresentes((prev) => prev.filter((p) => p.id !== payload.old.id))
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'pessoas' },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            setPessoas((prev) =>
+              prev.some((p) => p.id === payload.new.id) ? prev : [...prev, payload.new]
+            )
+          } else if (payload.eventType === 'UPDATE') {
+            setPessoas((prev) =>
+              prev.map((p) => (p.id === payload.new.id ? payload.new : p))
+            )
+          } else if (payload.eventType === 'DELETE') {
+            setPessoas((prev) => prev.filter((p) => p.id !== payload.old.id))
+            setPessoaSelecionadaId((currentId) =>
+              currentId === payload.old.id ? null : currentId
+            )
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [session?.user?.id])
+
+  useEffect(() => {
+    setHistoricoAberto(false)
+  }, [pessoaSelecionadaId])
+
   const pessoaSelecionada = useMemo(
     () => pessoas.find((p) => p.id === pessoaSelecionadaId) || null,
     [pessoas, pessoaSelecionadaId]
@@ -69,11 +124,19 @@ export default function App() {
   const presentesDaPessoa = useMemo(
     () =>
       presentes
-        .filter((g) => g.pessoa_id === pessoaSelecionadaId)
+        .filter((g) => g.pessoa_id === pessoaSelecionadaId && !g.arquivado)
         .sort((a, b) => {
           if (a.comprado !== b.comprado) return a.comprado ? 1 : -1
           return new Date(a.created_at) - new Date(b.created_at)
         }),
+    [presentes, pessoaSelecionadaId]
+  )
+
+  const arquivadosDaPessoa = useMemo(
+    () =>
+      presentes
+        .filter((g) => g.pessoa_id === pessoaSelecionadaId && g.arquivado)
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at)),
     [presentes, pessoaSelecionadaId]
   )
 
@@ -91,6 +154,8 @@ export default function App() {
   const isOwner = Boolean(
     pessoaSelecionada && pessoaSelecionada.user_id === session?.user?.id
   )
+
+  const amigoSecreto = pessoaSelecionada?.amigo_secreto ?? false
 
   async function adicionarPresente(payload) {
     if (!pessoaSelecionadaId) return
@@ -124,6 +189,25 @@ export default function App() {
       return
     }
     setPresentes((prev) => prev.filter((p) => p.id !== id))
+  }
+
+  async function arquivarPresente(id) {
+    await atualizarPresente(id, { arquivado: true })
+  }
+
+  async function toggleAmigoSecreto() {
+    if (!pessoaSelecionada) return
+    const { data, error } = await supabase
+      .from('pessoas')
+      .update({ amigo_secreto: !pessoaSelecionada.amigo_secreto })
+      .eq('id', pessoaSelecionada.id)
+      .select()
+      .single()
+    if (error) {
+      alert(error.message)
+      return
+    }
+    setPessoas((prev) => prev.map((p) => (p.id === data.id ? data : p)))
   }
 
   if (loadingAuth) {
@@ -192,19 +276,32 @@ export default function App() {
               />
             ) : (
               <>
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-start justify-between mb-4 flex-wrap gap-3">
                   <h2 className="text-2xl font-semibold text-gray-900 flex items-center gap-2">
                     <span className="text-3xl">{pessoaSelecionada.emoji}</span>
                     Presentes para {pessoaSelecionada.nome}
                   </h2>
-                  {totalEstimado > 0 && (
-                    <span className="text-sm text-gray-500">
-                      total estimado:{' '}
-                      <strong className="text-gray-700">
-                        {formatBRL(totalEstimado)}
-                      </strong>
-                    </span>
-                  )}
+                  <div className="flex items-center gap-4 flex-wrap">
+                    {isOwner && (
+                      <label className="flex items-center gap-1.5 cursor-pointer text-sm text-gray-500 hover:text-gray-700 select-none">
+                        <input
+                          type="checkbox"
+                          checked={amigoSecreto}
+                          onChange={toggleAmigoSecreto}
+                          className="w-4 h-4 accent-brand-500"
+                        />
+                        Amigo secreto
+                      </label>
+                    )}
+                    {totalEstimado > 0 && (
+                      <span className="text-sm text-gray-500">
+                        total estimado:{' '}
+                        <strong className="text-gray-700">
+                          {formatBRL(totalEstimado)}
+                        </strong>
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-3 mb-4">
@@ -220,13 +317,47 @@ export default function App() {
                       presente={p}
                       onAtualizar={atualizarPresente}
                       onRemover={removerPresente}
+                      onArquivar={arquivarPresente}
                       nomeViewer={nomeViewer}
                       isOwner={isOwner}
+                      amigoSecreto={amigoSecreto}
                     />
                   ))}
                 </div>
 
                 {isOwner && <PresenteForm onAdicionar={adicionarPresente} />}
+
+                {arquivadosDaPessoa.length > 0 && (
+                  <div className="mt-6">
+                    <button
+                      type="button"
+                      onClick={() => setHistoricoAberto((o) => !o)}
+                      className="flex items-center gap-2 text-sm text-gray-400 hover:text-gray-600 w-full text-left transition"
+                    >
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className={`transition-transform ${historicoAberto ? 'rotate-180' : ''}`}
+                      >
+                        <polyline points="6 9 12 15 18 9" />
+                      </svg>
+                      Histórico ({arquivadosDaPessoa.length} presente{arquivadosDaPessoa.length !== 1 ? 's' : ''})
+                    </button>
+                    {historicoAberto && (
+                      <div className="mt-3 space-y-2">
+                        {arquivadosDaPessoa.map((p) => (
+                          <HistoricoCard key={p.id} presente={p} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
               </>
             )}
           </section>
@@ -253,6 +384,28 @@ function EmptyState({ titulo, mensagem }) {
       <div className="text-4xl mb-2">🎀</div>
       <h3 className="font-semibold text-gray-800">{titulo}</h3>
       <p className="text-sm text-gray-500 mt-1">{mensagem}</p>
+    </div>
+  )
+}
+
+function HistoricoCard({ presente }) {
+  const valorFormatado = formatBRL(presente.valor)
+  return (
+    <div className="rounded-xl border border-gray-100 bg-gray-50/70 px-4 py-3 flex items-start gap-3">
+      <div className="mt-0.5 w-4 h-4 rounded border border-gray-200 shrink-0" />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-2">
+          <span className="text-sm text-gray-400 line-through">{presente.nome}</span>
+          {valorFormatado && (
+            <span className="text-xs text-gray-400 shrink-0">{valorFormatado}</span>
+          )}
+        </div>
+        {presente.comprado_por && (
+          <span className="text-xs text-gray-400 mt-0.5 block">
+            comprado por {presente.comprado_por}
+          </span>
+        )}
+      </div>
     </div>
   )
 }

@@ -7,18 +7,17 @@
 -- Remover objetos existentes
 drop trigger if exists on_auth_user_created on auth.users;
 drop function if exists public.handle_new_user();
-drop policy if exists "pessoas_all"   on public.pessoas;
-drop policy if exists "presentes_all" on public.presentes;
 drop table if exists public.presentes;
 drop table if exists public.pessoas;
 
 -- Tabela de pessoas
 create table public.pessoas (
-  id         uuid primary key default gen_random_uuid(),
-  nome       text not null,
-  emoji      text default '🎁',
-  user_id    uuid not null references auth.users(id) unique,
-  created_at timestamptz not null default now()
+  id            uuid primary key default gen_random_uuid(),
+  nome          text not null,
+  emoji         text default '🎁',
+  user_id       uuid not null references auth.users(id) unique,
+  amigo_secreto boolean not null default false,
+  created_at    timestamptz not null default now()
 );
 
 create index idx_pessoas_user_id on public.pessoas(user_id);
@@ -33,6 +32,7 @@ create table public.presentes (
   observacao   text,
   comprado     boolean not null default false,
   comprado_por text,
+  arquivado    boolean not null default false,
   created_at   timestamptz not null default now()
 );
 
@@ -98,3 +98,14 @@ set search_path = public;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
+
+-- =============================================================
+-- Migrations para banco já existente (v2 → v3)
+-- Execute no SQL Editor do Supabase se NÃO quiser fazer reset.
+-- =============================================================
+-- alter table public.pessoas  add column if not exists amigo_secreto boolean not null default false;
+-- alter table public.presentes add column if not exists arquivado    boolean not null default false;
+--
+-- Habilitar Realtime nas tabelas (necessário para sync ao vivo):
+-- alter publication supabase_realtime add table public.presentes;
+-- alter publication supabase_realtime add table public.pessoas;

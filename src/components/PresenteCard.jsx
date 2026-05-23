@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { formatBRL, safeHostname } from '../lib/format.js'
 
-export default function PresenteCard({ presente, onAtualizar, onRemover, nomeViewer, isOwner }) {
+export default function PresenteCard({ presente, onAtualizar, onRemover, onArquivar, nomeViewer, isOwner, amigoSecreto }) {
   const [marcando, setMarcando] = useState(false)
   const [editando, setEditando] = useState(false)
   const [nome, setNome] = useState(presente.nome)
@@ -10,6 +10,7 @@ export default function PresenteCard({ presente, onAtualizar, onRemover, nomeVie
   const [observacao, setObservacao] = useState(presente.observacao || '')
   const [salvando, setSalvando] = useState(false)
   const [erro, setErro] = useState(null)
+  const [confirmandoRemocao, setConfirmandoRemocao] = useState(false)
 
   const valorFormatado = formatBRL(presente.valor)
   const host = presente.link ? safeHostname(presente.link) : null
@@ -56,9 +57,13 @@ export default function PresenteCard({ presente, onAtualizar, onRemover, nomeVie
     setEditando(false)
   }
 
-  async function remover() {
+  function remover() {
+    if (presente.comprado && onArquivar) {
+      setConfirmandoRemocao(true)
+      return
+    }
     if (!window.confirm(`Remover "${presente.nome}"?`)) return
-    await onRemover(presente.id)
+    onRemover(presente.id)
   }
 
   if (editando) {
@@ -221,7 +226,7 @@ export default function PresenteCard({ presente, onAtualizar, onRemover, nomeVie
             )}
             {presente.comprado && presente.comprado_por && (
               <span className="text-xs bg-emerald-100 text-emerald-700 rounded-full px-2 py-0.5">
-                comprado por {presente.comprado_por}
+                {isOwner && amigoSecreto ? 'reservado' : `comprado por ${presente.comprado_por}`}
               </span>
             )}
             {isOwner && (
@@ -243,6 +248,39 @@ export default function PresenteCard({ presente, onAtualizar, onRemover, nomeVie
               </div>
             )}
           </div>
+
+          {confirmandoRemocao && (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="text-xs text-gray-500">O que fazer?</span>
+              <button
+                type="button"
+                onClick={async () => {
+                  await onArquivar(presente.id)
+                  setConfirmandoRemocao(false)
+                }}
+                className="text-xs bg-amber-50 text-amber-700 border border-amber-200 rounded-lg px-3 py-1 hover:bg-amber-100 transition"
+              >
+                Arquivar
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  await onRemover(presente.id)
+                  setConfirmandoRemocao(false)
+                }}
+                className="text-xs bg-red-50 text-red-600 border border-red-200 rounded-lg px-3 py-1 hover:bg-red-100 transition"
+              >
+                Remover
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmandoRemocao(false)}
+                className="text-xs text-gray-400 hover:text-gray-600"
+              >
+                cancelar
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </article>
