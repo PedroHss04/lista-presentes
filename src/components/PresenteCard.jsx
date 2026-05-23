@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { formatBRL, safeHostname } from '../lib/format.js'
 
-export default function PresenteCard({ presente, onAtualizar, onRemover, nomeViewer }) {
+export default function PresenteCard({ presente, onAtualizar, onRemover, nomeViewer, isOwner }) {
   const [marcando, setMarcando] = useState(false)
   const valorFormatado = formatBRL(presente.valor)
   const host = presente.link ? safeHostname(presente.link) : null
@@ -12,11 +12,7 @@ export default function PresenteCard({ presente, onAtualizar, onRemover, nomeVie
       if (presente.comprado) {
         await onAtualizar(presente.id, { comprado: false, comprado_por: null })
       } else {
-        const por =
-          nomeViewer ||
-          window.prompt('Quem está comprando? (seu nome)') ||
-          'Anônimo'
-        await onAtualizar(presente.id, { comprado: true, comprado_por: por })
+        await onAtualizar(presente.id, { comprado: true, comprado_por: nomeViewer })
       }
     } finally {
       setMarcando(false)
@@ -38,6 +34,7 @@ export default function PresenteCard({ presente, onAtualizar, onRemover, nomeVie
     >
       <div className="flex items-start gap-3">
         <button
+          type="button"
           onClick={toggleComprado}
           disabled={marcando}
           title={presente.comprado ? 'Desmarcar' : 'Marcar como comprado'}
@@ -113,12 +110,15 @@ export default function PresenteCard({ presente, onAtualizar, onRemover, nomeVie
                 comprado por {presente.comprado_por}
               </span>
             )}
-            <button
-              onClick={remover}
-              className="text-gray-400 hover:text-red-500 text-xs ml-auto"
-            >
-              remover
-            </button>
+            {isOwner && (
+              <button
+                type="button"
+                onClick={remover}
+                className="text-gray-400 hover:text-red-500 text-xs ml-auto"
+              >
+                remover
+              </button>
+            )}
           </div>
         </div>
       </div>
